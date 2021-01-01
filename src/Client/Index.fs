@@ -1,16 +1,20 @@
 module Index
 
 open Elmish
+open System
 open Thoth.Fetch
 
 open Shared
 
 type Model =
     { Hello: string
-      Status: BuildStatus }
+      Status: BuildStatus
+      ShownErrors: Guid option }
 
 type Msg =
     | GotHello of string
+    | ShowErrors of Guid
+    | HideErrors
 
 let init() =
     let model : Model =
@@ -19,19 +23,20 @@ let init() =
             BuildRequest.create(), None
             BuildRequest.create(), BuildProgress.create() |> Some
             BuildRequest.create(), { BuildProgress.create() with Errors = [ "error MSB1234: failed" ] } |> Some
-        ] }
+          ]
+          ShownErrors = None }
     let getHello() = Fetch.get<unit, string> Route.hello
     let cmd = Cmd.OfPromise.perform getHello () GotHello
     model, cmd
 
 let update msg model =
     match msg with
-    | GotHello hello ->
-        { model with Hello = hello }, Cmd.none
+    | GotHello hello -> { model with Hello = hello }, Cmd.none
+    | ShowErrors id -> { model with ShownErrors = Some id }, Cmd.none
+    | HideErrors -> { model with ShownErrors = None }, Cmd.none
 
 open Fable.FontAwesome
 open Feliz
-open System
 
 let renderProgress (progress : BuildProgress) =
     let elapsed = DateTime.UtcNow - progress.Start
@@ -79,7 +84,7 @@ let renderProgress (progress : BuildProgress) =
         ]
     ]
 
-let renderRequest request (progress : BuildProgress option) =
+let renderRequest request (progress : BuildProgress option) (model : Model) dispatch =
     let (bar, server, details) = 
         match progress with
         | None -> (Html.none, Html.none, Html.none)
@@ -89,9 +94,18 @@ let renderRequest request (progress : BuildProgress option) =
             if p.Errors.Length = 0
             then Html.td []
             else Html.td [
-                prop.style [ style.color.red ]
-                prop.children [
-                    Fa.i [ Fa.Solid.List ] []
+                Html.button [
+                    prop.style [ style.color.red ]
+                    prop.onClick (fun _ ->
+                        match model.ShownErrors with
+                        | Some id ->
+                            if id = request.Id
+                            then dispatch HideErrors
+                            else dispatch (ShowErrors request.Id)
+                        | None -> dispatch (ShowErrors request.Id))
+                    prop.children [
+                        Fa.i [ Fa.Solid.List ] []
+                    ]
                 ]
             ]
     Html.tr [
@@ -121,7 +135,38 @@ let renderRequest request (progress : BuildProgress option) =
         ]
     ]
 
-let renderRequests filter model =
+let renderErrors request (progress : BuildProgress option) (model : Model) =
+    match progress with
+    | Some p ->
+        if p.Errors.Length = 0 then
+            Html.none
+        else
+            match model.ShownErrors with
+            | Some id ->
+                if id = request.Id
+                then Html.tr [
+                        Html.td [
+                            prop.colSpan 7
+                            prop.children [
+                                Html.p [
+                                    prop.style [
+                                        style.color.red
+                                        style.textAlign.left
+                                    ]
+                                    prop.children [
+                                        for e in p.Errors do
+                                            yield Html.span e
+                                            yield Html.br []
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                else Html.none
+            | _ -> Html.none
+    | _ -> Html.none
+
+let renderRequests filter model dispatch =
     Html.table [
         prop.style [
             style.marginLeft length.auto
@@ -134,14 +179,15 @@ let renderRequests filter model =
                 | Requests requests ->
                     let filtered = requests |> List.filter (fun (_, p) -> filter p)
                     for r, p in filtered do
-                        yield renderRequest r p
+                        yield renderRequest r p model dispatch
+                        yield renderErrors r p model
             ]
         ]
     ]
 
-let renderQueue model = renderRequests Option.isNone model
+let renderQueue model dispatch = renderRequests Option.isNone model dispatch
 
-let renderPool model = renderRequests Option.isSome model
+let renderPool model dispatch = renderRequests Option.isSome model dispatch
 
 let view model dispatch =
     Html.div [ 
@@ -157,11 +203,11 @@ let view model dispatch =
                 Html.h2 [
                     Fa.i [ Fa.Solid.Pause ] []
                 ]
-                renderQueue model
+                renderQueue model dispatch
                 Html.h2 [
                     Fa.i [ Fa.Solid.Play ] []
                 ]
-                renderPool model
+                renderPool model dispatch
             ]
         ]
     ]
