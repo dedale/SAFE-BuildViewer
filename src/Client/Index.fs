@@ -6,12 +6,11 @@ open System
 open Shared
 
 type Model =
-    { Hello: string
-      Status: BuildStatus
+    { Status: BuildStatus
       ShownErrors: Guid option }
 
 type Msg =
-    | GotHello of string
+    | Status of BuildStatus
     | ShowErrors of Guid
     | HideErrors
 
@@ -30,7 +29,7 @@ module Channel =
                 let msg = msg.data |> decode<ChannelMessage>
                 printfn "received %s" msg.Topic
                 match msg.Topic with
-                | "server" -> msg.Payload |> decode<string> |> GotHello |> dispatch
+                | "status" -> msg.Payload |> decode<BuildStatus> |> Status |> dispatch
                 | _ -> ()
 
             let rec connect () =
@@ -56,18 +55,13 @@ module Channel =
 
 let init() =
     let model : Model =
-        { Hello = ""
-          Status = Requests [
-            BuildRequest.create(), None
-            BuildRequest.create(), BuildProgress.create() |> Some
-            BuildRequest.create(), { BuildProgress.create() with Errors = [ "error MSB1234: failed" ] } |> Some
-          ]
+        { Status = Requests []
           ShownErrors = None }
     model, Channel.connect
 
 let update msg model =
     match msg with
-    | GotHello hello -> { model with Hello = hello }, Cmd.none
+    | Status status -> { model with Status = status }, Cmd.none
     | ShowErrors id -> { model with ShownErrors = Some id }, Cmd.none
     | HideErrors -> { model with ShownErrors = None }, Cmd.none
 
@@ -235,7 +229,6 @@ let view model dispatch =
         prop.children [
             Html.div [
                 Html.img [ prop.src "favicon.png" ]
-                Html.h2 model.Hello
                 Html.h2 [
                     Fa.i [ Fa.Solid.Pause ] []
                 ]

@@ -1,8 +1,42 @@
 module Server
 
 open FSharp.Control.Tasks.V2
-open Giraffe
 open Saturn
+open Shared
+
+let loadBuilds () = Requests [
+    BuildRequest.create(), None
+    BuildRequest.create(), BuildProgress.create() |> Some
+]
+
+type BuildStatus with
+
+    member x.add request =
+        match x with
+        | Requests requests ->
+            (request, None) :: requests |> Requests
+
+    member x.startBuild id progress =
+        match x with
+        | Requests requests ->
+            requests |> List.map (fun (k, v) -> if k.Id = id then k, Some progress else k, v) |> Requests
+
+    member x.addError id error =
+        match x with
+        | Requests requests ->
+            requests
+            |> List.map (fun (k, v) ->
+                if k.Id = id then
+                    match v with
+                    | Some progress -> k, Some { progress with Errors = error :: progress.Errors }
+                    | _ -> k, v
+                else k, v)
+            |> Requests
+
+    member x.remove id =
+        match x with
+        | Requests requests ->
+            requests |> List.filter (fun (k, v) -> k.Id <> id) |> Requests
 
 let sendMessage (hub: Channels.ISocketHub) topic payload =
     task {
@@ -38,18 +72,11 @@ module ApplicationExtension =
 open ApplicationExtension
 open Microsoft.Extensions.DependencyInjection
 open Saturn.Channels
-open Shared
-open System
-
-let webApp =
-    router {
-        get Route.hello (json "Hello from SAFE!")
-    }
 
 let app =
     application {
         url "http://0.0.0.0:8085"
-        use_router webApp
+        no_router
         memory_cache
         use_static "public"
         use_json_serializer (Thoth.Json.Giraffe.ThothSerializer())
@@ -58,12 +85,34 @@ let app =
         start_custom_process (fun app ->
             task {
                 let socketHub = app.ApplicationServices.GetService<ISocketHub>()
-                let started = DateTime.UtcNow
+                let send topic payload = sendMessage socketHub topic payload
+                let mutable status = loadBuilds()
                 let rec loop () =
                     task {
-                        let message = (DateTime.UtcNow - started).ToString("hh\:mm\:ss") |> sprintf "uptime is %s"
-                        do! sendMessage socketHub "server" message
+                        do! send "status" status
+
                         System.Threading.Thread.Sleep 2000
+                        
+                        let newRequest = BuildRequest.create()
+                        status <- status.add newRequest
+                        do! send "status" status
+
+                        System.Threading.Thread.Sleep 2000
+
+                        let start = BuildProgress.create()
+                        status <- status.startBuild newRequest.Id start
+                        do! send "status" status
+
+                        System.Threading.Thread.Sleep 2000
+
+                        let error = "error MS1234: failed"
+                        status <- status.addError newRequest.Id error
+                        do! send "status" status
+
+                        System.Threading.Thread.Sleep 10000
+
+                        status <- status.remove newRequest.Id
+
                         do! loop()
                     }
                 do! loop()
