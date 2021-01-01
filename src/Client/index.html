@@ -4,6 +4,40 @@
     <title>SAFE Template</title>
     <meta charset="utf-8">
     <link rel="shortcut icon" type="image/png" href="/favicon.png"/>
+    <style>
+.progress-bar {
+  position:relative;
+  border:#ccc solid 1px;
+  width:200px;
+  height:20px;
+  line-height:20px;
+  vertical-align:midle;
+  overflow:hidden;
+  margin:5px auto 5px;
+  font-family:arial, sans-serif;
+  font-weight:bold;
+  font-size:15px;
+  box-shadow:0px 4px 5px -5px rgba(0, 0, 0, 0.25);
+}
+.bar {
+  position:absolute;
+  top:0px;
+  height:100%;
+  overflow:hidden;
+}
+span.bar {
+  text-align:center;
+  left:0px
+}
+.negative {
+  background:white;
+  right:0px;
+}
+td {
+  padding-left:10px;
+  padding-right:10px;
+}
+    </style>
 </head>
 <body>
     <div id="elmish-app"></div>

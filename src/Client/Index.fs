@@ -26,6 +26,53 @@ let update msg model =
         { model with Hello = hello }, Cmd.none
 
 open Feliz
+open System
+
+let renderProgress (progress : BuildProgress) =
+    let elapsed = DateTime.UtcNow - progress.Start
+    let elapsedMin = int elapsed.TotalMinutes
+    let isLate = elapsedMin >= progress.ExpectedMin
+    let color = if progress.Errors.Length = 0 then "green" else "red"
+    let width = 200
+    let leftWidth = if isLate then width else width * elapsedMin / progress.ExpectedMin
+    let text = sprintf "%dm:%ss elapsed" elapsedMin (elapsed.Seconds.ToString("00"))
+    Html.div [
+        prop.className "progress-bar"
+        prop.children [
+            Html.div [
+                prop.classes [ "bar"; "positive" ]
+                prop.style [
+                    style.width leftWidth
+                    style.backgroundColor color
+                ]
+                prop.children [
+                    Html.span [
+                        prop.className "bar"
+                        prop.style [
+                            style.width width
+                            style.color "white"
+                        ]
+                        prop.text text
+                    ]
+                ]
+            ]
+            if not isLate then Html.div [
+                prop.classes [ "bar"; "negative" ]
+                prop.style [ style.width (width - leftWidth) ]
+                prop.children [
+                    Html.span [
+                        prop.className "bar"
+                        prop.style [
+                            style.width width
+                            style.left -leftWidth
+                            style.color color
+                        ]
+                        prop.text text
+                    ]
+                ]
+            ]
+        ]
+    ]
 
 let renderRequest request =
     Html.tr [
@@ -82,6 +129,27 @@ let view model dispatch =
                 Html.h1 "safe_minimal"
                 Html.h2 model.Hello
                 renderQueue model
+                renderProgress {
+                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-11.0)
+                    ExpectedMin = 20
+                    Server = "VMBUILD01"
+                    Errors = []
+                }
+                renderProgress {
+                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-9.0)
+                    ExpectedMin = 20
+                    Server = "VMBUILD02"
+                    Errors = [
+                        "error MSB1234: failed"
+                        "error LNK2019: unresolved external"
+                    ]
+                }
+                renderProgress {
+                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-25.0)
+                    ExpectedMin = 20
+                    Server = "VMBUILD12"
+                    Errors = []
+                }
             ]
         ]
     ]
