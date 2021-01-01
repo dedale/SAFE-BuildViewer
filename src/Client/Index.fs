@@ -23,14 +23,20 @@ let update msg model =
     | GotHello hello ->
         { model with Hello = hello }, Cmd.none
 
-open Fable.React
-open Fable.React.Props
+open Feliz
 
 let view model dispatch =
-    div [ Style [ TextAlign TextAlignOptions.Center; Padding 40 ] ] [
-        div [] [
-            img [ Src "favicon.png" ]
-            h1 [] [ str "safe_minimal" ]
-            h2 [] [ str model.Hello ]
+    Html.div [ 
+        prop.style [
+            style.fontFamily "sans-serif"
+            style.textAlign.center
+            style.padding 40
+        ]
+        prop.children [
+            Html.div [
+                Html.img [ prop.src "favicon.png" ]
+                Html.h1 "safe_minimal"
+                Html.h2 model.Hello
+            ]
         ]
     ]
