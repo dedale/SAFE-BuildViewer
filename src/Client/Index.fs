@@ -15,7 +15,7 @@ type Msg =
 let init() =
     let model : Model =
         { Hello = ""
-          Status = Requests [ BuildRequest.create() ] }
+          Status = Requests [ BuildRequest.create(), None ] }
     let getHello() = Fetch.get<unit, string> Route.hello
     let cmd = Cmd.OfPromise.perform getHello () GotHello
     model, cmd
@@ -63,7 +63,7 @@ let renderQueue model =
             Html.tbody [
                 match model.Status with
                 | Requests requests ->
-                    for r in requests do
+                    for r, _ in requests do
                         yield renderRequest r
             ]
         ]

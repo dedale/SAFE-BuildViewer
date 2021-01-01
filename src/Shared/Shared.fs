@@ -47,5 +47,16 @@ type BuildRequest =
           Platform = X64
           Configuration = Release }
 
+type BuildProgress =
+    { Server : string
+      Start : DateTime
+      ExpectedMin : int
+      Errors : string list }
+    static member create () =
+        { Server = "VMBUILD01"
+          Start = DateTime.UtcNow.AddMinutes(-9.0)
+          ExpectedMin = 20
+          Errors = [] }
+
 type BuildStatus =
-    | Requests of BuildRequest list
+    | Requests of (BuildRequest * BuildProgress option) list
