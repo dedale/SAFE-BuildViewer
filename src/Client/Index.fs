@@ -2,7 +2,6 @@ module Index
 
 open Elmish
 open System
-open Thoth.Fetch
 
 open Shared
 
@@ -16,6 +15,45 @@ type Msg =
     | ShowErrors of Guid
     | HideErrors
 
+module Channel =
+
+    open Browser.Types
+    open Browser.WebSocket
+
+    type ChannelMessage = { Topic: string; Payload: string }
+
+    let inline decode<'a> m = m |> unbox<string> |> Thoth.Json.Decode.Auto.unsafeFromString<'a>
+
+    let connect =
+        fun dispatch ->
+            let onWebSocketMessage (msg:MessageEvent) =
+                let msg = msg.data |> decode<ChannelMessage>
+                printfn "received %s" msg.Topic
+                match msg.Topic with
+                | "server" -> msg.Payload |> decode<string> |> GotHello |> dispatch
+                | _ -> ()
+
+            let rec connect () =
+                let host = Browser.Dom.window.location.host
+                let url = sprintf "ws://%s/socket/data" host
+                let ws = WebSocket.Create(url)
+
+                ws.onopen <- (fun _ ->
+                    printfn "connection opened!"
+                    ())
+                ws.onclose <- (fun _ ->
+                    printfn "connection closed!"
+                    promise {
+                        do! Promise.sleep 2000
+                        connect()
+                    }
+                )
+                ws.onmessage <- onWebSocketMessage
+
+            connect()
+
+        |> Cmd.ofSub
+
 let init() =
     let model : Model =
         { Hello = ""
@@ -25,9 +63,7 @@ let init() =
             BuildRequest.create(), { BuildProgress.create() with Errors = [ "error MSB1234: failed" ] } |> Some
           ]
           ShownErrors = None }
-    let getHello() = Fetch.get<unit, string> Route.hello
-    let cmd = Cmd.OfPromise.perform getHello () GotHello
-    model, cmd
+    model, Channel.connect
 
 let update msg model =
     match msg with
