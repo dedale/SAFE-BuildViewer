@@ -15,7 +15,11 @@ type Msg =
 let init() =
     let model : Model =
         { Hello = ""
-          Status = Requests [ BuildRequest.create(), None ] }
+          Status = Requests [
+            BuildRequest.create(), None
+            BuildRequest.create(), BuildProgress.create() |> Some
+            BuildRequest.create(), { BuildProgress.create() with Errors = [ "error MSB1234: failed" ] } |> Some
+        ] }
     let getHello() = Fetch.get<unit, string> Route.hello
     let cmd = Cmd.OfPromise.perform getHello () GotHello
     model, cmd
@@ -25,6 +29,7 @@ let update msg model =
     | GotHello hello ->
         { model with Hello = hello }, Cmd.none
 
+open Fable.FontAwesome
 open Feliz
 open System
 
@@ -74,7 +79,21 @@ let renderProgress (progress : BuildProgress) =
         ]
     ]
 
-let renderRequest request =
+let renderRequest request (progress : BuildProgress option) =
+    let (bar, server, details) = 
+        match progress with
+        | None -> (Html.none, Html.none, Html.none)
+        | Some p ->
+            Html.td [ renderProgress p ],
+            Html.td p.Server,
+            if p.Errors.Length = 0
+            then Html.td []
+            else Html.td [
+                prop.style [ style.color.red ]
+                prop.children [
+                    Fa.i [ Fa.Solid.List ] []
+                ]
+            ]
     Html.tr [
         prop.style [
             style.border (1, borderStyle.solid, "lightgray")
@@ -96,10 +115,13 @@ let renderRequest request =
                 prop.style [ style.fontFamily "monospace" ]
                 prop.text (request.Configuration.ToString())
             ]
+            bar
+            server
+            details
         ]
     ]
 
-let renderQueue model =
+let renderRequests filter model =
     Html.table [
         prop.style [
             style.marginLeft length.auto
@@ -110,11 +132,16 @@ let renderQueue model =
             Html.tbody [
                 match model.Status with
                 | Requests requests ->
-                    for r, _ in requests do
-                        yield renderRequest r
+                    let filtered = requests |> List.filter (fun (_, p) -> filter p)
+                    for r, p in filtered do
+                        yield renderRequest r p
             ]
         ]
     ]
+
+let renderQueue model = renderRequests Option.isNone model
+
+let renderPool model = renderRequests Option.isSome model
 
 let view model dispatch =
     Html.div [ 
@@ -126,30 +153,15 @@ let view model dispatch =
         prop.children [
             Html.div [
                 Html.img [ prop.src "favicon.png" ]
-                Html.h1 "safe_minimal"
                 Html.h2 model.Hello
+                Html.h2 [
+                    Fa.i [ Fa.Solid.Pause ] []
+                ]
                 renderQueue model
-                renderProgress {
-                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-11.0)
-                    ExpectedMin = 20
-                    Server = "VMBUILD01"
-                    Errors = []
-                }
-                renderProgress {
-                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-9.0)
-                    ExpectedMin = 20
-                    Server = "VMBUILD02"
-                    Errors = [
-                        "error MSB1234: failed"
-                        "error LNK2019: unresolved external"
-                    ]
-                }
-                renderProgress {
-                    BuildProgress.Start = DateTime.UtcNow.AddMinutes(-25.0)
-                    ExpectedMin = 20
-                    Server = "VMBUILD12"
-                    Errors = []
-                }
+                Html.h2 [
+                    Fa.i [ Fa.Solid.Play ] []
+                ]
+                renderPool model
             ]
         ]
     ]
