@@ -59,10 +59,9 @@ I used minimal SAFE template:
 
 ## Feliz
 
-I prefer Feliz over Fable.React for the same reasons as in the Elmish book.
-https://zaid-ajaj.github.io/the-elmish-book/#/chapters/elm/render-html
+I prefer `Feliz` over `Fable.React` for the same reasons as in [The Elmish book](https://zaid-ajaj.github.io/the-elmish-book/#/chapters/elm/render-html).
 
-That's why I have migrated the client code to Feliz.
+That's why I have migrated the client code to `Feliz`.
 
 [6f62ec84](https://github.com/dedale/SAFE-BuildViewer/commit/6f62ec8434a3e7c42aaa04865122bb62f5ff1d70)
 
@@ -70,8 +69,8 @@ That's why I have migrated the client code to Feliz.
 
 Then I start populating my model with various types:
 
-* BuildStatus: list of BuildRequest
-* BuildRequest: a request in the queue with various info like platform, configuration, sha1, user, etc.
+* `BuildStatus`: list of `BuildRequest`
+* `BuildRequest`: a request in the queue with various info like platform, configuration, sha1, user, etc.
 
 [2883966e](https://github.com/dedale/SAFE-BuildViewer/commit/2883966ee55ac87dd93458f1391f5b0b164cc23f)
 
@@ -85,14 +84,14 @@ I update client model to render a first dummy request.
 
 I need to extend current API to include build progress info.
 
-I add the type BuildProgress for this matter:
+I add the type `BuildProgress` for this matter:
 
-* Server: host currently processing this request.
-* Start: time when this request was removed from queue.
-* ExpectedMin: expected duration in minutes.
-* Errors: list of errors found in log.
+* `Server`: host currently processing this request.
+* `Start`: time when this request was removed from queue.
+* `ExpectedMin`: expected duration in minutes.
+* `Errors`: list of errors found in log.
 
-In BuildStatus (list of build requests), I now use a tuple where the second parameter is a BuildProgress option.
+In `BuildStatus` (list of build requests), I now use a tuple where the second parameter is a `BuildProgress` option.
 This allows me to use the same list for the requests still in queue and the ones currently running.
 
 [35a2246d](https://github.com/dedale/SAFE-BuildViewer/commit/35a2246d120054cb92c02628751250d18f7b46e9)
@@ -116,7 +115,7 @@ I update client code to render two sections:
 * Queued build requests.
 * Running build requests with progress info.
 
-I also do the necessary to use some FontAwesome icons.
+I also do the necessary to use some `FontAwesome` icons.
 
 [932288e1](https://github.com/dedale/SAFE-BuildViewer/commit/932288e16693f3596d8f034529139476b67a49bb)
 
@@ -153,7 +152,7 @@ I adapted the code from two other SAFE samples:
 * [DieselMeister/raspberrypi-safe-stack-thermometer-example](https://github.com/DieselMeister/raspberrypi-safe-stack-thermometer-example)
 * [CompositionalIT/safe-sockets](https://github.com/CompositionalIT/safe-sockets)
 
-Before sending BuildStatus updates from the server, in a first step I just update hello message with server uptime.
+Before sending `BuildStatus` updates from the server, in a first step I just update hello message with server uptime.
 
 [13439c4e](https://github.com/dedale/SAFE-BuildViewer/commit/13439c4ecca0278a858e72285c2cb0bdddd5a298)
 
@@ -164,13 +163,13 @@ Client model now starts with an empty list of builds.
 
 On server side:
 
-* I extend BuildStatus API with all members needed to:
+* I extend `BuildStatus` API with all members needed to:
   * Add a new queued request
   * Start progress of an existing request
   * Add an error to a running request
   * Remove a (finished) request
 * I remove the router (not used anymore)
-* I update the loop to continuously send BuildStatus updates with all operations listed above.
+* I update the loop to continuously send `BuildStatus` updates with all operations listed above.
 
 [76d72d23](https://github.com/dedale/SAFE-BuildViewer/commit/76d72d231a5f6c069adc4badd1b9b9eca02355ec)
 
@@ -179,6 +178,4 @@ On server side:
 * [The Elmish Book](https://zaid-ajaj.github.io/the-elmish-book/#/)
 * [Feliz documentation](https://zaid-ajaj.github.io/Feliz/#/)
 * [Redux dev tools](https://safe-stack.github.io/docs/faq-troubleshooting/) to fix browser errors
-
-
 
