@@ -99,7 +99,7 @@ This allows me to use the same list for the requests still in queue and the ones
 ## CSS progress bar
 
 I need a cool progress with inverted colors bar to render build progress.
-I found a cool one in codepen, but unfortunately, it depends on compass.
+I found [a cool one in codepen](https://codepen.io/valiooo/pen/qyiov), but unfortunately, it depends on compass.
 
 So I refactored the code to suit my needs with vanilla CSS.
 I would have preferred a pure F# solution, but I could not manage to remove all raw css (cf. changes in index.html)
